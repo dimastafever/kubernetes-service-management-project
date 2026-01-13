@@ -1,0 +1,54 @@
+# Application Deployment для Service Management System
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-system
+  namespace: service-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: service-system
+  template:
+    metadata:
+      labels:
+        app: service-system
+    spec:
+      containers:
+      - name: service-system
+        image: dmitriier/service-system:latest
+        env:
+        - name: DB_HOST
+          value: "db"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "postgres"
+        - name: DB_PASSWORD
+          value: "postgres"
+        - name: DB_NAME
+          value: "car_service_db"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-system
+  namespace: service-system
+spec:
+  type: ClusterIP
+  selector:
+    app: service-system
+  ports:
+  - port: 80
+    targetPort: 8080
+
