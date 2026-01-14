@@ -1,37 +1,37 @@
-# Kubernetes 1.24+ with Docker - cri-dockerd Installation Solution
+# Kubernetes 1.24+ с Docker - Решение установки cri-dockerd
 
-## Problem Analysis
+## Анализ проблемы
 
-The error `dial tcp [::1]:10248: connect: connection refused` occurs because:
-- Kubernetes 1.24+ removed in-tree Docker support
-- Docker doesn't provide a CRI (Container Runtime Interface) endpoint by default
-- You need **cri-dockerd** to bridge Docker to CRI
+Ошибка `dial tcp [::1]:10248: connect: connection refused` возникает из-за:
+- Kubernetes 1.24+ удалил встроенную поддержку Docker
+- Docker по умолчанию не предоставляет конечную точку CRI (Container Runtime Interface)
+- Вам нужен **cri-dockerd** для моста Docker к CRI
 
-## Solution - Step by Step
+## Решение - Шаг за шагом
 
-### Step 1: Install cri-dockerd
+### Шаг 1: Установите cri-dockerd
 
-**Option A: Use the existing package (Recommended)**
+**Вариант A: Используйте существующий пакет (Рекомендуется)**
 ```bash
 cd /home/adminstd/Desktop
 sudo dpkg -i cri-dockerd_0.3.1.3-0.ubuntu-jammy_amd64.deb
-sudo apt-get install -f -y  # Fix any dependency issues
+sudo apt-get install -f -y  # Исправить любые проблемы с зависимостями
 ```
 
-**Option B: If package installation fails, download from GitHub**
+**Вариант B: Если установка пакета не удалась, скачайте с GitHub**
 ```bash
 wget https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.1/cri-dockerd_0.3.1-0.ubuntu-jammy_amd64.deb
 sudo dpkg -i cri-dockerd_0.3.1-0.ubuntu-jammy_amd64.deb
 sudo apt-get install -f -y
 ```
 
-### Step 2: Configure cri-dockerd
+### Шаг 2: Настройте cri-dockerd
 
 ```bash
-# Create configuration directory
+# Создать каталог конфигурации
 sudo mkdir -p /etc/cri-dockerd
 
-# Create cri-dockerd configuration
+# Создать конфигурацию cri-dockerd
 sudo bash -c 'cat > /etc/cri-dockerd/config.toml << EOF
 [grpc]
   address = "/run/cri-dockerd.sock"
@@ -40,10 +40,10 @@ sudo bash -c 'cat > /etc/cri-dockerd/config.toml << EOF
 EOF'
 ```
 
-### Step 3: Configure kubelet to use cri-dockerd
+### Шаг 3: Настройте kubelet для использования cri-dockerd
 
 ```bash
-# Create kubelet override
+# Создать переопределение kubelet
 sudo mkdir -p /etc/systemd/system/kubelet.service.d/
 sudo bash -c 'cat > /etc/systemd/system/kubelet.service.d/20-cri-dockerd.conf << EOF
 [Service]
@@ -51,7 +51,7 @@ Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-e
 EOF'
 ```
 
-### Step 4: Enable and start cri-dockerd
+### Шаг 4: Включите и запустите cri-dockerd
 
 ```bash
 sudo systemctl daemon-reload
@@ -59,43 +59,43 @@ sudo systemctl enable cri-dockerd
 sudo systemctl start cri-dockerd
 ```
 
-### Step 5: Verify cri-dockerd is running
+### Шаг 5: Проверьте, что cri-dockerd работает
 
 ```bash
 sudo systemctl status cri-dockerd
 ```
 
-Expected output should show `active (running)`.
+Ожидаемый вывод должен показать `active (running)`.
 
-### Step 6: Restart kubelet
+### Шаг 6: Перезапустите kubelet
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart kubelet
 ```
 
-### Step 7: Verify the setup
+### Шаг 7: Проверьте настройку
 
 ```bash
-# Check kubelet health
+# Проверить здоровье kubelet
 curl -sSL http://localhost:10248/healthz
 ```
 
-Expected output: `ok`
+Ожидаемый вывод: `ok`
 
-## Complete One-Command Solution
+## Полное решение одной командой
 
-Run all commands at once:
+Запустите все команды сразу:
 
 ```bash
-# Install cri-dockerd
+# Установить cri-dockerd
 cd /home/adminstd/Desktop
 sudo dpkg -i cri-dockerd_0.3.1.3-0.ubuntu-jammy_amd64.deb 2>/dev/null || \
 wget -q https://github.com/Mirantis/cri-dockerd/releases/download/v0.3.1/cri-dockerd_0.3.1-0.ubuntu-jammy_amd64.deb && \
 sudo dpkg -i cri-dockerd_0.3.1-0.ubuntu-jammy_amd64.deb
 sudo apt-get install -f -y
 
-# Configure cri-dockerd
+# Настроить cri-dockerd
 sudo mkdir -p /etc/cri-dockerd
 sudo bash -c 'cat > /etc/cri-dockerd/config.toml << EOF
 [grpc]
@@ -104,51 +104,51 @@ sudo bash -c 'cat > /etc/cri-dockerd/config.toml << EOF
   docker_endpoint = "unix:///var/run/docker.sock"
 EOF'
 
-# Configure kubelet
+# Настроить kubelet
 sudo mkdir -p /etc/systemd/system/kubelet.service.d/
 sudo bash -c 'cat > /etc/systemd/system/kubelet.service.d/20-cri-dockerd.conf << EOF
 [Service]
 Environment="KUBELET_EXTRA_ARGS=--container-runtime=remote --container-runtime-endpoint=unix:///run/cri-dockerd.sock"
 EOF'
 
-# Start services
+# Запустить сервисы
 sudo systemctl daemon-reload
 sudo systemctl enable cri-dockerd
 sudo systemctl start cri-dockerd
 sudo systemctl restart kubelet
 
-# Verify
+# Проверить
 sleep 5
 curl -sSL http://localhost:10248/healthz
 ```
 
-## Troubleshooting
+## Устранение неполадок
 
-If you still encounter issues:
+Если вы все еще сталкиваетесь с проблемами:
 
-1. **Check cri-dockerd status:**
+1. **Проверьте статус cri-dockerd:**
    ```bash
    sudo systemctl status cri-dockerd
    ```
 
-2. **Check kubelet logs:**
+2. **Проверьте логи kubelet:**
    ```bash
    sudo journalctl -u kubelet -n 50 --no-pager
    ```
 
-3. **Check cri-dockerd logs:**
+3. **Проверьте логи cri-dockerd:**
    ```bash
    sudo journalctl -u cri-dockerd -n 50 --no-pager
    ```
 
-4. **Verify socket exists:**
+4. **Проверьте, существует ли сокет:**
    ```bash
    ls -la /run/cri-dockerd.sock
    ```
 
-## After Installation
+## После установки
 
-Once installed successfully, you can retry the kubeadm init:
+После успешной установки вы можете повторить kubeadm init:
 
 ```bash
 sudo /usr/local/bin/kubeadm init --config /etc/kubernetes/kubeadm-config.yaml --ignore-preflight-errors=all
