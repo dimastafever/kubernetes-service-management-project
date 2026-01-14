@@ -158,3 +158,9 @@
 - **Prometheus**: Сбор метрик приложения
 - **Grafana**: Дашборды для визуализации
 - **Loki**: Централизованное логирование
+
+## Источники  
+
+[Как развернуть и управлять Kubernetes](https://serverspace.ru/support/help/kak-razvernut-i-upravlyat-kubernetes/?utm_source=google.com&utm_medium=organic&utm_campaign=google.com&utm_referrer=google.com)
+
+[Основной репозиторий, позже сделаю клон](https://github.com/SermerL2/computer_service_system)
